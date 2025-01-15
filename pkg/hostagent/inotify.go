@@ -41,23 +41,46 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case watchEvent := <-mountWatchCh:
-			watchPath := watchEvent.Path()
-			stat, err := os.Stat(watchPath)
-			if err != nil {
-				continue
-			}
+			logrus.Debug("inotify event: ", watchEvent.Path(), "event: ", watchEvent.Event(), "sys: ", watchEvent.Sys())
 
-			if filterEvents(watchEvent, stat) {
-				continue
-			}
+			watchPath := watchEvent.Path()
+
+			// TODO: stat will filter out deleted files, so we skip it
+			// stat, err := os.Stat(watchPath)
+			// if err != nil {
+			// 	continue
+			// }
+
+			// if filterEvents(watchEvent, stat) {
+			// 	continue
+			// }
 
 			for k, v := range mountSymlinks {
 				if strings.HasPrefix(watchPath, k) {
 					watchPath = strings.ReplaceAll(watchPath, k, v)
 				}
 			}
-			utcTimestamp := timestamppb.New(stat.ModTime().UTC())
-			event := &guestagentapi.Inotify{MountPath: watchPath, Time: utcTimestamp}
+
+			var eventID guestagentapi.EventType
+			switch watchEvent.Event() {
+			case notify.Create:
+				eventID = guestagentapi.EventType_CREATE
+			case notify.Remove:
+				eventID = guestagentapi.EventType_REMOVE
+			case notify.Write:
+				eventID = guestagentapi.EventType_WRITE
+			case notify.Rename:
+				eventID = guestagentapi.EventType_RENAME
+			}
+
+			utcTimestamp := timestamppb.Now() // temp
+
+			// utcTimestamp := timestamppb.New(stat.ModTime().UTC())
+			event := &guestagentapi.Inotify{
+				MountPath: watchPath,
+				Time:      utcTimestamp,
+				Event:     eventID,
+			}
 			err = inotifyClient.Send(event)
 			if err != nil {
 				logrus.WithError(err).Warn("failed to send inotify")

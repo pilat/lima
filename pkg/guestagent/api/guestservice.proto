@@ -5,15 +5,15 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 service GuestService {
-  rpc GetInfo(google.protobuf.Empty) returns (Info);
-  rpc GetEvents(google.protobuf.Empty) returns (stream Event);
-  rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
-  
-  rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
+    rpc GetInfo(google.protobuf.Empty) returns (Info);
+    rpc GetEvents(google.protobuf.Empty) returns (stream Event);
+    rpc PostInotify(stream Inotify) returns (google.protobuf.Empty);
+    
+    rpc Tunnel(stream TunnelMessage) returns (stream TunnelMessage);
 }
 
 message Info {
-  repeated IPPort local_ports = 1;
+    repeated IPPort local_ports = 1;
 }
 
 message Event {
@@ -30,14 +30,22 @@ message IPPort {
 }
 
 message Inotify {
-  string mount_path = 1;
-  google.protobuf.Timestamp time = 2;
+    string mount_path = 1;
+    google.protobuf.Timestamp time = 2;
+    EventType event = 3;
+}
+
+enum EventType {
+    CREATE = 0;
+    REMOVE = 1;
+    WRITE = 2;
+    RENAME = 3;
 }
 
 message TunnelMessage {
-  string id = 1;
-  string protocol = 2; //tcp, udp
-  bytes data = 3;
-  string guestAddr = 4;
-  string udpTargetAddr = 5;
+    string id = 1;
+    string protocol = 2; //tcp, udp
+    bytes data = 3;
+    string guestAddr = 4;
+    string udpTargetAddr = 5;
 }

@@ -360,12 +360,29 @@ func (a *agent) fixSystemTimeSkew() {
 }
 
 func (a *agent) HandleInotify(event *api.Inotify) {
-	location := event.MountPath
-	if _, err := os.Stat(location); err == nil {
-		local := event.Time.AsTime().Local()
-		err := os.Chtimes(location, local, local)
-		if err != nil {
-			logrus.Errorf("error in inotify handle. Event: %s, Error: %s", event, err)
-		}
+	logrus.Info("Handled event: ", event.Event, " ", event.MountPath)
+
+	// TODO: check is /proc/fake_inotify is available if not fallback to the old method. check only once in 30 seconds
+	eventTypeToFile := map[api.EventType]string{
+		api.EventType_CREATE: "/proc/fake_inotify/create",
+		api.EventType_WRITE:  "/proc/fake_inotify/modify",
+		api.EventType_REMOVE: "/proc/fake_inotify/unlink",
+		api.EventType_RENAME: "/proc/fake_inotify/attrib",
 	}
+
+	filename, ok := eventTypeToFile[event.Event]
+	if !ok {
+		return
+	}
+
+	// logrus.Info("Handled event: ", event, " writing to ", filename, " with ", event.MountPath)
+
+	f, err := os.OpenFile(filename, os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+
+	defer f.Close()
+
+	_, _ = f.WriteString(event.MountPath)
 }
