@@ -7,6 +7,7 @@
 #include <linux/slab.h>
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
+#include <linux/mutex.h>
 
 #define MODULE_NAME "fake_inotify"
 
@@ -29,6 +30,8 @@ module_param(enable_logging, bool, 0644);
 MODULE_PARM_DESC(enable_logging, "Enable or disable debug logs");
 
 static struct proc_dir_entry *proc_entry;
+
+static DEFINE_MUTEX(fake_inotify_mutex);
 
 /* Lightweight logging wrappers */
 #define log_info(fmt, ...) \
@@ -129,19 +132,37 @@ static void handle_create(struct inode *inode, struct dentry *dentry, struct pat
 static ssize_t modify_write(struct file *file, const char __user *ubuf,
 			    size_t count, loff_t *ppos)
 {
-	return trigger_event(ubuf, count, ppos, handle_modify, "modify");
+	ssize_t ret;
+
+	mutex_lock(&fake_inotify_mutex);
+	ret = trigger_event(ubuf, count, ppos, handle_modify, "modify");
+	mutex_unlock(&fake_inotify_mutex);
+
+	return ret;
 }
 
 static ssize_t attrib_write(struct file *file, const char __user *ubuf,
 			    size_t count, loff_t *ppos)
 {
-	return trigger_event(ubuf, count, ppos, handle_attrib, "attrib");
+	ssize_t ret;
+
+	mutex_lock(&fake_inotify_mutex);
+	ret = trigger_event(ubuf, count, ppos, handle_attrib, "attrib");
+	mutex_unlock(&fake_inotify_mutex);
+
+	return ret;
 }
 
 static ssize_t create_write(struct file *file, const char __user *ubuf,
 			    size_t count, loff_t *ppos)
 {
-	return trigger_event(ubuf, count, ppos, handle_create, "create");
+	ssize_t ret;
+
+	mutex_lock(&fake_inotify_mutex);
+	ret = trigger_event(ubuf, count, ppos, handle_create, "create");
+	mutex_unlock(&fake_inotify_mutex);
+
+	return ret;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -207,6 +228,7 @@ static ssize_t handle_deletion(struct file *file, const char __user *ubuf,
 	fsnotify_name(FS_DELETE, fake_inode, FSNOTIFY_EVENT_INODE,
 		      parent_inode, &fake_dname, 0);
 
+	iput(fake_inode);
 	path_put(&parent_dir_path);
 	kfree(buf);
 
@@ -220,7 +242,13 @@ static ssize_t handle_deletion(struct file *file, const char __user *ubuf,
 static ssize_t unlink_write(struct file *file, const char __user *ubuf,
 			    size_t count, loff_t *ppos)
 {
-	return handle_deletion(file, ubuf, count, ppos);
+	ssize_t ret;
+
+	mutex_lock(&fake_inotify_mutex);
+	ret = handle_deletion(file, ubuf, count, ppos);
+	mutex_unlock(&fake_inotify_mutex);
+
+	return ret;
 }
 
 /* -------------------------------------------------------------------------- */
