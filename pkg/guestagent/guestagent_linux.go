@@ -363,26 +363,29 @@ func (a *agent) HandleInotify(event *api.Inotify) {
 	logrus.Info("Handled event: ", event.Event, " ", event.MountPath)
 
 	// TODO: check is /proc/fake_inotify is available if not fallback to the old method. check only once in 30 seconds
-	eventTypeToFile := map[api.EventType]string{
-		api.EventType_CREATE: "/proc/fake_inotify/create",
-		api.EventType_WRITE:  "/proc/fake_inotify/modify",
-		api.EventType_REMOVE: "/proc/fake_inotify/unlink",
-		api.EventType_RENAME: "/proc/fake_inotify/attrib",
-	}
 
-	filename, ok := eventTypeToFile[event.Event]
-	if !ok {
+	strToWrite := ""
+	switch event.Event {
+	case api.EventType_CREATE:
+		strToWrite = "CREATE"
+	case api.EventType_WRITE:
+		strToWrite = "MODIFY"
+	case api.EventType_REMOVE:
+		strToWrite = "UNLINK"
+	case api.EventType_RENAME:
+		strToWrite = "ATTRIB"
+	default:
 		return
 	}
 
-	// logrus.Info("Handled event: ", event, " writing to ", filename, " with ", event.MountPath)
+	strToWrite += "," + event.MountPath
 
-	f, err := os.OpenFile(filename, os.O_WRONLY, 0644)
+	f, err := os.OpenFile("/proc/fake_inotify", os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
 
 	defer f.Close()
 
-	_, _ = f.WriteString(event.MountPath)
+	_, _ = f.WriteString(strToWrite)
 }

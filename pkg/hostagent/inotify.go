@@ -71,6 +71,11 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 				eventID = guestagentapi.EventType_WRITE
 			case notify.Rename:
 				eventID = guestagentapi.EventType_RENAME
+			case notify.FSEventsInodeMetaMod:
+				eventID = guestagentapi.EventType_RENAME // ideally we need ATTRIB
+			default:
+				logrus.Warn("unknown inotify event: ", watchEvent.Event())
+				continue
 			}
 
 			utcTimestamp := timestamppb.Now() // temp
