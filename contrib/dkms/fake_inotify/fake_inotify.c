@@ -10,7 +10,6 @@
 #include <linux/mutex.h>
 #include <linux/mount.h>
 #include <linux/pseudo_fs.h>
-#include <linux/user_namespace.h>
 
 #define MODULE_NAME "fake_inotify"
 

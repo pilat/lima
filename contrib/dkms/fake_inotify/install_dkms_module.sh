@@ -24,22 +24,11 @@ case "$DISTRO" in
         ;;
     fedora)
         echo "Installing dependencies for Fedora..."
-        sudo dnf install -y dkms gcc make kernel-devel kernel-headers
+        sudo dnf install -y dkms gcc make kernel-devel-$(uname -r)
         ;;
-    centos|rocky|almalinux)
+    centos)
         echo "Installing dependencies for CentOS/Rocky Linux/AlmaLinux..."
-        sudo yum install -y epel-release
-        sudo yum install -y dkms gcc make kernel-devel kernel-headers
-        ;;
-    arch|manjaro)
-        echo "Installing dependencies for Arch/Manjaro..."
-        sudo pacman -Syu --noconfirm
-        sudo pacman -S --noconfirm dkms linux-headers base-devel
-        ;;
-    opensuse|sles)
-        echo "Installing dependencies for openSUSE/SLES..."
-        sudo zypper ref
-        sudo zypper install -y dkms gcc make kernel-devel kernel-headers
+        sudo yum --enablerepo=epel install -yy dkms gcc make "kernel-devel-uname-r == $(uname -r)"
         ;;
     *)
         echo "Unsupported distribution: $DISTRO"
